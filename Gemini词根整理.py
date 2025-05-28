@@ -1,61 +1,65 @@
 import re
 import openpyxl
 from openpyxl.styles import Font, Alignment
-import os # 用于检查文件是否存在
+import os
+
+# --- 配置区：请在此处修改您的文件路径 ---
+MARKDOWN_FILE_PATH = "D:\Workspace\Stable\Python\ReWordOrganizer\词根temp.md"  # << 修改为您实际的 Markdown 文件名和路径
+# 默认创建新 Excel 文件
+NEW_EXCEL_FILE_PATH = "parsed_roots_output.xlsx" # << 修改为您希望生成的新 Excel 文件名和路径
+# -----------------------------------------
 
 def parse_markdown_to_roots_data(markdown_content):
     """
     使用正则表达式解析 Markdown 文本内容，提取词根数据。
-
-    Markdown 格式预期为:
-    1.  **RootName**
-        * 语言：Language Info
-        * 释义：Meaning Info
-        * 词根形式：Forms Info (可选)
-
-    返回: 包含提取数据的字典列表。
+    预期 Markdown 格式:
+    序号.  **主词根**
+        * 语言：语言信息
+        * 释义：释义信息
+        * 备注：备注信息 (可选)
+        * 词根形式：词根形式信息 (可选)
     """
     extracted_data = []
-    # 正则表达式：
-    # - 匹配序号、点、空格、**词根**
-    # - 捕获“语言”后的内容
-    # - 捕获“释义”后的内容
-    # - 可选捕获“词根形式”后的内容
-    # re.MULTILINE 使得 ^ 和 $ 匹配每行的开始和结束
-    # re.DOTALL 使得 . 可以匹配换行符 (虽然这里主要靠非贪婪匹配和明确的换行符 \n)
-    # 使用命名捕获组 (?P<name>...)
+    # 正则表达式针对新的 Markdown 格式 (包含可选的“备注”行和可选的“词根形式”行)
     pattern = re.compile(
-        r"^\s*\d+\.\s+\*\*(?P<root>.+?)\*\*.*?\n"
-        r"\s*\*\s*语言：\s*(?P<language>.+?)\s*?\n"
-        r"\s*\*\s*释义：\s*(?P<meaning>.+?)\s*?\n"
-        r"(?:\s*\*\s*词根形式：\s*(?P<forms>.+?)\s*?\n)?" # 词根形式行为可选
+        r"^\s*\d+\.\s+\*\*(?P<root>.+?)\*\*\s*?\n"          # 1. 主词根 (加粗)
+        r"\s*\*\s*语言：\s*(?P<language>.+?)\s*?\n"        # 2. 语言
+        r"\s*\*\s*释义：\s*(?P<meaning>.+?)\s*?\n"          # 3. 释义
+        r"(?:\s*\*\s*备注：\s*(?P<remarks>.*?)\s*?\n)?"      # 4. 备注 (可选行，内容可为空)
+        r"(?:\s*\*\s*词根形式：\s*(?P<forms>.*?)\s*?\n)?"  # 5. 词根形式 (可选行，内容可为空)
         , re.MULTILINE
     )
 
     for match in pattern.finditer(markdown_content):
         data = match.groupdict()
-        # 清理捕获到的数据，并处理可选组可能为 None 的情况
         root = data.get("root", "").strip()
         language = data.get("language", "").strip()
         meaning = data.get("meaning", "").strip()
-        forms = data.get("forms", "").strip() if data.get("forms") else "" # 如果forms为None则为空字符串
+        # 处理可选组可能为 None 或仅包含空白的情况
+        remarks = data.get("remarks")
+        remarks_cleaned = remarks.strip() if remarks else ""
+        
+        forms = data.get("forms")
+        forms_cleaned = forms.strip() if forms else ""
 
         if root: # 确保至少捕获到了词根
             extracted_data.append({
-                "词根": root,
-                "语言": language,
-                "释义": meaning,
-                "词根形式": forms
+                "root": root,
+                "language": language,
+                "meaning": meaning,
+                "remarks": remarks_cleaned,
+                "forms": forms_cleaned
             })
             
     return extracted_data
 
-def create_excel_from_data(data_list, excel_filename="词根列表.xlsx"):
+def create_new_excel_from_data(data_list, excel_filename):
     """
-    使用 openpyxl 将数据列表创建为 Excel 文件。
+    使用 openpyxl 将数据列表创建为一个新的 Excel 文件。
+    输出3列：“词根”，“综合释义”，“词根形式”。
     """
     if not data_list:
-        print("没有数据可写入 Excel。")
+        print("没有数据可写入新的 Excel 文件。")
         return
 
     workbook = openpyxl.Workbook()
@@ -63,79 +67,96 @@ def create_excel_from_data(data_list, excel_filename="词根列表.xlsx"):
     sheet.title = "词根数据"
 
     # 写入表头并设置样式
-    headers = ["词根", "释义",  "词根形式"]
+    headers = ["词根", "综合释义", "词根形式"]
     sheet.append(headers)
-    for cell in sheet[1]: # 获取第一行的所有单元格 (表头)
+    for cell in sheet[1]: 
         cell.font = Font(bold=True)
-        cell.alignment = Alignment(horizontal="center")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
 
     # 写入数据行
     for item in data_list:
+        # 构建“综合释义”列
+        meaning_parts = []
+        if item.get("meaning"):
+            meaning_parts.append(item.get("meaning"))
+        if item.get("language"):
+            meaning_parts.append(f"来自{item.get('language')}")
+        if item.get("remarks"): # 只有当备注不为空时才添加
+            meaning_parts.append(item.get("remarks"))
+        
+        combined_meaning = ", ".join(filter(None, meaning_parts)) # filter(None,...) 移除空字符串
+
         row_data = [
-            item.get("词根", ""),
-            item.get("语言", ""),
-            item.get("释义", ""),
-            item.get("词根形式", "")
+            item.get("root", ""),
+            combined_meaning,
+            item.get("forms", "")
         ]
         sheet.append(row_data)
 
-    # 调整列宽 (可选，但能改善可读性)
-    for col_idx, column_letter in enumerate(['A', 'B', 'C', 'D'], 1):
+    # 调整列宽
+    column_letters = ['A', 'B', 'C']
+    for col_idx, column_letter in enumerate(column_letters):
         max_length = 0
-        column = sheet[column_letter]
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = (max_length + 2) if max_length > 0 else 15 # 最小宽度15
+        # 计算表头长度
+        if len(headers[col_idx]) > max_length:
+            max_length = len(headers[col_idx])
+        # 计算数据列长度
+        for i in range(2, sheet.max_row + 1): # 从第二行开始（数据行）
+            cell_value = sheet.cell(row=i, column=col_idx + 1).value
+            if cell_value:
+                # 对“综合释义”列，字符可能较多，可以考虑设置一个最大宽度上限或根据实际情况调整
+                current_len = len(str(cell_value))
+                if column_letter == 'B': # "综合释义"列
+                    current_len = min(current_len, 60) # 例如，综合释义列最大宽度限制在60个字符左右
+                if current_len > max_length:
+                    max_length = current_len
+        
+        adjusted_width = (max_length + 3) if max_length > 0 else 20 # 最小宽度20
         sheet.column_dimensions[column_letter].width = adjusted_width
+        # 对于“综合释义”列，启用自动换行
+        if column_letter == 'B':
+             for i in range(1, sheet.max_row + 1):
+                sheet.cell(row=i, column=col_idx + 1).alignment = Alignment(wrap_text=True, vertical="top")
 
 
     # 保存文件
     try:
         workbook.save(excel_filename)
-        print(f"成功将 {len(data_list)} 条数据写入到 '{excel_filename}'")
+        print(f"成功将 {len(data_list)} 条数据写入到新的 Excel 文件 '{excel_filename}'")
+    except PermissionError:
+        print(f"保存 Excel 文件 '{excel_filename}' 失败：权限不足。可能文件已被打开或您没有写入权限。")
     except Exception as e:
         print(f"保存 Excel 文件 '{excel_filename}' 时发生错误: {e}")
-        print("请确保您有写入该位置的权限，并且文件名是合法的。")
 
 def main():
-    md_filename_input = r'D:\Workspace\Stable\Python\ReWordOrganizer\词根temp.md'
-
     # 检查 Markdown 文件是否存在
-    if not os.path.exists(md_filename_input):
-        print(f"错误: Markdown 文件 '{md_filename_input}' 不存在。请检查文件名和路径。")
+    if not os.path.exists(MARKDOWN_FILE_PATH):
+        print(f"错误: Markdown 文件 '{MARKDOWN_FILE_PATH}' 未找到。请在脚本顶部的配置区设置正确的文件路径。")
         return
 
-    # excel_filename_input = input("请输入您希望保存的 Excel 文件名 (例如: output_roots.xlsx) [默认为: 词根列表.xlsx]: ").strip()
-    # if not excel_filename_input:
-    #     excel_filename_to_save = "词根列表.xlsx"
-    # else:
-    #     if not excel_filename_input.lower().endswith(".xlsx"):
-    #         excel_filename_to_save = excel_filename_input + ".xlsx"
-    #     else:
-    #         excel_filename_to_save = excel_filename_input
-    
     try:
-        with open(md_filename_input, 'r', encoding='utf-8') as f:
+        with open(MARKDOWN_FILE_PATH, 'r', encoding='utf-8') as f:
             markdown_content = f.read()
     except Exception as e:
-        print(f"读取 Markdown 文件 '{md_filename_input}' 时发生错误: {e}")
+        print(f"读取 Markdown 文件 '{MARKDOWN_FILE_PATH}' 时发生错误: {e}")
         return
 
     roots_data = parse_markdown_to_roots_data(markdown_content)
 
     if roots_data:
-        create_excel_from_data(roots_data,)
+        print(f"从 Markdown 文件中成功解析出 {len(roots_data)} 条词根数据。")
+        create_new_excel_from_data(roots_data, NEW_EXCEL_FILE_PATH)
     else:
-        print(f"未能从 '{md_filename_input}' 中解析到任何词根数据。请检查文件内容是否符合预期的 Markdown 格式。")
-        print("预期的 Markdown 格式示例：")
-        print("1.  **词根名称**")
-        print("    * 语言：语言信息")
-        print("    * 释义：释义信息")
-        print("    * 词根形式：形式信息 (此行可选)")
+        print(f"未能从 '{MARKDOWN_FILE_PATH}' 中解析到任何词根数据。请检查：")
+        print("1. 文件路径是否正确。")
+        print("2. 文件内容是否符合预期的 Markdown 格式 (包含序号、**词根**、* 语言、* 释义等)。")
+        print("3. 正则表达式是否能匹配您的 Markdown 格式。")
 
 if __name__ == "__main__":
+    # 关于追加到现有文件的说明：
+    # openpyxl 可以通过 openpyxl.load_workbook("现有文件.xlsx") 加载现有文件，
+    # 然后获取工作表，找到最后一行，再 sheet.append(新数据行)，最后 workbook.save("现有文件.xlsx")。
+    # 但如您所担心的，这涉及到加载和重写整个文件，如果原始文件样式非常复杂或特殊，
+    # 存在微小的样式变动风险。因此，本脚本默认创建新文件以确保安全。
+    # 如果您确实需要追加功能，可以基于以上提示进行修改，但请务必先在副本上测试。
     main()
