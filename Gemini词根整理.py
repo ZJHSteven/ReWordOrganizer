@@ -102,11 +102,8 @@ def create_excel_from_data(data_list, excel_filename="词根列表.xlsx"):
         print("请确保您有写入该位置的权限，并且文件名是合法的。")
 
 def main():
-    md_filename_input = input("请输入包含词根数据的 Markdown 文件名 (例如: my_roots.md): ").strip()
-    if not md_filename_input:
-        print("错误：未提供 Markdown 文件名。")
-        return
-    
+    md_filename_input = r'D:\Workspace\Stable\Python\ReWordOrganizer\词根temp.md'
+
     # 检查 Markdown 文件是否存在
     if not os.path.exists(md_filename_input):
         print(f"错误: Markdown 文件 '{md_filename_input}' 不存在。请检查文件名和路径。")
@@ -131,7 +128,7 @@ def main():
     roots_data = parse_markdown_to_roots_data(markdown_content)
 
     if roots_data:
-        create_excel_from_data(roots_data, excel_filename_to_save)
+        create_excel_from_data(roots_data,)
     else:
         print(f"未能从 '{md_filename_input}' 中解析到任何词根数据。请检查文件内容是否符合预期的 Markdown 格式。")
         print("预期的 Markdown 格式示例：")
