@@ -2,13 +2,13 @@ import re
 from openpyxl import Workbook, load_workbook
 
 # 读取 Markdown 文件内容
-with open('d:/Workspace/Stable/Python/单词整理/词组temp.md', 'r', encoding='utf-8') as file:
+with open('d:/Workspace/Stable/Python/RewordOrganizer/词组temp.md', 'r', encoding='utf-8') as file:
     content = file.read()
 
 
 
 # 定义正则表达式模式来匹配词根信息，处理带加号的情况
-pattern = r'词根："(.*?)"（(.*?)，来自(.*?)“(.*?)(?:\+(.*?))?”）'
+pattern = r'词根："([^"]+)"\s*\((.*?)，源自\s*([^\s*]+)\s*\*([^*]+)\*\)'
 
 # 查找所有匹配的内容
 matches = re.findall(pattern, content)
@@ -22,8 +22,6 @@ for match in matches:
     meaning = match[1]
     language = match[2]
     original_word = match[3]
-    if match[4]:
-        original_word += f"+{match[4]}"
 
     # 检查词根是否已经存在于字典中
     if root not in root_dict:
@@ -44,13 +42,13 @@ except FileNotFoundError:
     root_column_values = []
 
 # 过滤掉重复的词根和原词
-filtered_root_dict = {}
-for root, info in root_dict.items():
-    original_word = info['original_word']
-    if root not in root_column_values and original_word not in root_column_values:
-        filtered_root_dict[root] = info
+#filtered_root_dict = {}
+#for root, info in root_dict.items():
+#    original_word = info['original_word']
+#    if root not in root_column_values and original_word not in root_column_values:
+#        filtered_root_dict[root] = info
 
-root_dict = filtered_root_dict
+#root_dict = filtered_root_dict
 
 # 创建一个新的 Excel 工作簿
 wb = Workbook()
@@ -66,7 +64,7 @@ for root, info in root_dict.items():
     ws.append([info['original_word'], meaning_with_language, '', root])
 
 # 保存 Excel 文件
-wb.save('d:/Workspace/Stable/Python/单词整理/词根整理.xlsx')
+wb.save('d:/Workspace/Stable/Python/RewordOrganizer/词根整理.xlsx')
 
 # 输出词根信息
 print("词根\t语言来源\t原意")

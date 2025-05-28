@@ -10,7 +10,7 @@ def choose_files():
     root.withdraw()  # 隐藏根窗口
 
     # 固定的 Markdown 文件路径
-    markdown_file = r"D:\Workspace\Stable\Python\单词整理\词组temp.md"
+    markdown_file = r"D:\Workspace\Stable\Python\ReWordOrganizer\词组temp.md"
 
     # 选择输出的 Excel 文件的默认路径
     default_path = r"D:\Workspace\WPS"
