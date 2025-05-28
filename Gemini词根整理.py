@@ -25,7 +25,7 @@ def parse_markdown_to_roots_data(markdown_content):
     # re.DOTALL 使得 . 可以匹配换行符 (虽然这里主要靠非贪婪匹配和明确的换行符 \n)
     # 使用命名捕获组 (?P<name>...)
     pattern = re.compile(
-        r"^\s*\d+\.\s+\*\*(?P<root>.+?)\*\*\s*?\n"
+        r"^\s*\d+\.\s+\*\*(?P<root>.+?)\*\*.*?\n"
         r"\s*\*\s*语言：\s*(?P<language>.+?)\s*?\n"
         r"\s*\*\s*释义：\s*(?P<meaning>.+?)\s*?\n"
         r"(?:\s*\*\s*词根形式：\s*(?P<forms>.+?)\s*?\n)?" # 词根形式行为可选
@@ -63,7 +63,7 @@ def create_excel_from_data(data_list, excel_filename="词根列表.xlsx"):
     sheet.title = "词根数据"
 
     # 写入表头并设置样式
-    headers = ["词根", "语言", "释义", "词根形式"]
+    headers = ["词根", "释义",  "词根形式"]
     sheet.append(headers)
     for cell in sheet[1]: # 获取第一行的所有单元格 (表头)
         cell.font = Font(bold=True)
@@ -109,14 +109,14 @@ def main():
         print(f"错误: Markdown 文件 '{md_filename_input}' 不存在。请检查文件名和路径。")
         return
 
-    excel_filename_input = input("请输入您希望保存的 Excel 文件名 (例如: output_roots.xlsx) [默认为: 词根列表.xlsx]: ").strip()
-    if not excel_filename_input:
-        excel_filename_to_save = "词根列表.xlsx"
-    else:
-        if not excel_filename_input.lower().endswith(".xlsx"):
-            excel_filename_to_save = excel_filename_input + ".xlsx"
-        else:
-            excel_filename_to_save = excel_filename_input
+    # excel_filename_input = input("请输入您希望保存的 Excel 文件名 (例如: output_roots.xlsx) [默认为: 词根列表.xlsx]: ").strip()
+    # if not excel_filename_input:
+    #     excel_filename_to_save = "词根列表.xlsx"
+    # else:
+    #     if not excel_filename_input.lower().endswith(".xlsx"):
+    #         excel_filename_to_save = excel_filename_input + ".xlsx"
+    #     else:
+    #         excel_filename_to_save = excel_filename_input
     
     try:
         with open(md_filename_input, 'r', encoding='utf-8') as f:
